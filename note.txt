@@ -4,6 +4,4 @@ DATABASE_URL="postgresql://postgres.dmvbrvhgpxqsklacrald:Finproasd@123@aws-0-ap-
 # Direct connection to the database. Used for migrations.
 DIRECT_URL="postgresql://postgres.dmvbrvhgpxqsklacrald:Finproasd@123@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
         
-
-# BASE_URL_FE="https://matchtix.vercel.app/"
 BASE_URL_FE="http://localhost:3000"
