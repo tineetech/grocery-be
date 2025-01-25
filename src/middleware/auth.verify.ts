@@ -47,6 +47,7 @@ export class AuthMiddleware {
     };
   }
 
+  isSuperAdmin = this.checkRole("super_admin");
   checkStrAdmin = this.checkRole("store_admin");
   checkSuperAdmin = this.checkRole("super_admin");
 }

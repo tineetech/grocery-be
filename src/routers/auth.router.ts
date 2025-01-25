@@ -21,14 +21,20 @@ export class AuthRouter {
       this.authController.registerCustomer as unknown as RequestHandler
     );
 
-   this.router.post(
-     "/verification",
-     this.authMiddleware.verifyToken as unknown as RequestHandler,
-     this.authController.verifyAccount as unknown as RequestHandler
-   );
+    this.router.post(
+      "/verification",
+      this.authMiddleware.verifyToken as unknown as RequestHandler,
+      this.authController.verifyAccount as unknown as RequestHandler
+    );
+
+    this.router.post(
+      "/login-customer",
+      this.authController.loginCustomer as unknown as RequestHandler
+    );
   }
 
   getRouter(): Router {
     return this.router;
   }
 }
+

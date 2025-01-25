@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { tokenService } from "../helpers/createToken";
 import { sendVerificationEmail } from "../services/mailer";
 import { hashPass } from "../helpers/hashpassword";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
@@ -60,7 +61,6 @@ export class AuthController {
         confirmPassword,
       } = req.body;
 
-  
       if (password !== confirmPassword) {
         return res.status(400).json({ error: "Passwords do not match" });
       }
@@ -96,6 +96,29 @@ export class AuthController {
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Could Reach The Server Database" });
+    }
+  }
+  async loginCustomer(req: Request, res: Response) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email: req.body.email },
+      });
+
+      if (!user) throw "User Not Found";
+
+      const validPass = await bcrypt.compare(req.body.password, user.password!);
+      if (!validPass) throw "Password Incorrect";
+
+      const token = tokenService.createAccessToken({
+        id: user.user_id,
+        role: user.role,
+      });
+
+      return res
+        .status(201)
+        .send({ status: "ok", msg: "Login Success", token, user });
+    } catch (error) {
+      return res.status(400).json({ error: error });
     }
   }
 }
