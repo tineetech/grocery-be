@@ -28,8 +28,8 @@ export class AuthRouter {
     );
 
     this.router.post(
-      "/login-customer",
-      this.authController.loginCustomer as unknown as RequestHandler
+      "/login",
+      this.authController.loginAny as unknown as RequestHandler
     );
   }
 
