@@ -1,11 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
-import { uploadProduct, deleteFromCloudinary } from "../services/cloudinary";
+import { uploadProduct, uploadToCloudinary, deleteFromCloudinary } from "../services/cloudinary";
+import { responseError } from "../helpers/responseError";
 
 const prisma = new PrismaClient();
 
 export class ProductImageController {
-  uploadMiddleware = uploadProduct.array("images", 5); // Allow up to 5 images
+  uploadMiddleware = uploadProduct.array("images", 5);
 
   async addProductImages(req: Request, res: Response) {
     try {
@@ -13,25 +14,35 @@ export class ProductImageController {
       const files = req.files as Express.Multer.File[];
 
       if (!files || files.length === 0) {
-        throw new Error("No files uploaded");
+        return responseError(res, "No files uploaded");
       }
 
-      const images = await Promise.all(
-        files.map((file) =>
-          prisma.productImage.create({
+      const uploadPromises = files.map(async (file) => {
+        try {
+          // Upload to Cloudinary first
+          const result = await uploadToCloudinary(file.path, "product_image");
+          
+          // Then create database record with Cloudinary URL
+          return prisma.productImage.create({
             data: {
               product_id: parseInt(product_id),
-              url: (file as any).path,
+              url: result.secure_url,
             },
-          })
-        )
-      );
+          });
+        } catch (error) {
+          console.error("Error processing file:", error);
+          throw error;
+        }
+      });
 
-      return res.status(201).json(images);
+      const images = await Promise.all(uploadPromises);
+
+      return res.status(201).json({
+        status: "success",
+        data: images
+      });
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      return res.status(500).json({ error: message });
+      return responseError(res, error instanceof Error ? error.message : "Unknown error occurred");
     }
   }
 
@@ -43,11 +54,12 @@ export class ProductImageController {
         where: { product_id: parseInt(product_id) },
       });
 
-      return res.status(200).json(images);
+      return res.status(200).json({
+        status: "success",
+        data: images
+      });
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      return res.status(500).json({ error: message });
+      return responseError(res, error instanceof Error ? error.message : "Unknown error occurred");
     }
   }
 
@@ -61,28 +73,30 @@ export class ProductImageController {
       });
 
       if (!image) {
-        throw new Error("Image not found");
+        return responseError(res, "Image not found");
       }
 
-      // Delete from Cloudinary
-      await deleteFromCloudinary(image.url, "product_image");
+      // Delete from Cloudinary first
+      const cloudinaryResult = await deleteFromCloudinary(image.url, "product_image");
+      
+      if (!cloudinaryResult) {
+        return responseError(res, "Failed to delete image from cloud storage");
+      }
 
-      // Delete from database
+      // Then delete from database
       await prisma.productImage.delete({
         where: { image_id: parseInt(image_id) },
       });
 
-      return res
-        .status(200)
-        .json({ message: "Product image deleted successfully" });
+      return res.status(200).json({
+        status: "success",
+        message: "Product image deleted successfully"
+      });
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      return res.status(500).json({ error: message });
+      return responseError(res, error instanceof Error ? error.message : "Unknown error occurred");
     }
   }
 
-  // Get single product image
   async getProductImageById(req: Request, res: Response) {
     try {
       const { image_id } = req.params;
@@ -92,14 +106,15 @@ export class ProductImageController {
       });
 
       if (!image) {
-        throw new Error("Image not found");
+        return responseError(res, "Image not found");
       }
 
-      return res.status(200).json(image);
+      return res.status(200).json({
+        status: "success",
+        data: image
+      });
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      return res.status(500).json({ error: message });
+      return responseError(res, error instanceof Error ? error.message : "Unknown error occurred");
     }
   }
 }
