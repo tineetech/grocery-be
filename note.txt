@@ -11,3 +11,6 @@ SECRET_KEY="FinproAjaDeh"
 MAIL_USER="finalprojectkel@gmail.com"
 MAIL_PASS="ajof dqzw hggx uftx"
 
+CLOUDINARY_CLOUD_NAME=dak07ttxh
+CLOUDINARY_API_KEY=121592298285875
+CLOUDINARY_API_SECRET=w_aBn_fm-9PFEb4ZY11LvcJRklg

@@ -1,50 +1,55 @@
 import { Router } from "express";
-import { ProductController } from "../controllers/product.controllers";
+import { CategoryController } from "../controllers/category.controller";
 import { RequestHandler } from "express-serve-static-core";
 import { AuthMiddleware } from "../middleware/auth.verify";
 
-export class ProductRouter {
+export class CategoryRouter {
   private router: Router;
-  private productController: ProductController;
+  private categoryController: CategoryController;
   private authMiddleware: AuthMiddleware;
 
   constructor() {
     this.router = Router();
-    this.productController = new ProductController();
+    this.categoryController = new CategoryController();
     this.authMiddleware = new AuthMiddleware();
     this.initializeRoutes();
   }
 
   private initializeRoutes() {
+    // Create category - Super Admin only
     this.router.post(
       "/",
       this.authMiddleware.verifyToken as unknown as RequestHandler,
       this.authMiddleware.checkSuperAdmin as unknown as RequestHandler,
-      this.productController.createProduct as unknown as RequestHandler
+      this.categoryController.createCategory as unknown as RequestHandler
     );
 
-    this.router.patch(
-      "/:product_id",
-      this.authMiddleware.verifyToken as unknown as RequestHandler,
-      this.authMiddleware.checkSuperAdmin as unknown as RequestHandler,
-      this.productController.updateProduct as unknown as RequestHandler
-    );
-
-    this.router.delete(
-      "/:product_id",
-      this.authMiddleware.verifyToken as unknown as RequestHandler,
-      this.authMiddleware.checkSuperAdmin as unknown as RequestHandler,
-      this.productController.deleteProduct as unknown as RequestHandler
-    );
-
+    // Get all categories - Public
     this.router.get(
       "/",
-      this.productController.getProducts as unknown as RequestHandler
+      this.categoryController.getCategories as unknown as RequestHandler
     );
 
+    // Get category by ID - Public
     this.router.get(
-      "/:product_id",
-      this.productController.getProductById as unknown as RequestHandler
+      "/:category_id",
+      this.categoryController.getCategoryById as unknown as RequestHandler
+    );
+
+    // Update category - Super Admin only
+    this.router.put(
+      "/:category_id",
+      this.authMiddleware.verifyToken as unknown as RequestHandler,
+      this.authMiddleware.checkSuperAdmin as unknown as RequestHandler,
+      this.categoryController.updateCategory as unknown as RequestHandler
+    );
+
+    // Delete category - Super Admin only
+    this.router.delete(
+      "/:category_id",
+      this.authMiddleware.verifyToken as unknown as RequestHandler,
+      this.authMiddleware.checkSuperAdmin as unknown as RequestHandler,
+      this.categoryController.deleteCategory as unknown as RequestHandler
     );
   }
 
