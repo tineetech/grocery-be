@@ -57,6 +57,7 @@ export class ProductImageController {
 
       const image = await prisma.productImage.findUnique({
         where: { image_id: parseInt(image_id) },
+        
       });
 
       if (!image) {
