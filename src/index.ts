@@ -47,7 +47,7 @@ app.use("/api/product",productRouter.getRouter()) // zaki
 app.use("/api/inventory",inventoryRouter.getRouter()) // zaki
 app.use("/api/store",storeRouter.getRouter()) // zaki
 app.use("/api/category",categoryRouter.getRouter()) // zaki
-app.use("api/product-image",productImageRouter.getRouter()) // zaki
+app.use("/api/product-image",productImageRouter.getRouter()) // zaki
 
 app.get("/api", (req, res) => {
   res.send("Welcome to the API!");
