@@ -50,7 +50,7 @@ app.use("/api/category",categoryRouter.getRouter()) // zaki
 app.use("/api/product-image",productImageRouter.getRouter()) // zaki
 
 app.get("/api", (req, res) => {
-  res.send("Welcome to the API!");
+  res.send("Welcome to the API!"); 
 });
 
 app.listen(PORT, () => {
