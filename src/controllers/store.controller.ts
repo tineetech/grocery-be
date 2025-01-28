@@ -1,203 +1,217 @@
-import { PrismaClient } from "@prisma/client";
+// controllers/store.controller.ts
 import { Request, Response } from "express";
+import { StoreService } from "../services/store.service";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 export class StoreController {
-  async createStore(req: Request, res: Response) {
+  private storeService: StoreService;
+
+  constructor() {
+    this.storeService = new StoreService();
+  }
+
+  // Make sure all methods are bound to 'this'
+  public createStore = async (req: Request, res: Response) => {
     try {
       const {
         store_name,
         address,
         subdistrict,
         city,
-        city_id,
-        province,
-        province_id,
-        postcode,
-        latitude,
-        longitude,
-        user_id, // Optional: store admin user_id
-      } = req.body;
-
-      const existingStore = await prisma.store.findUnique({
-        where: { store_name },
-      });
-
-      if (existingStore) {
-        throw new Error("Store name already exists");
-      }
-
-      if (user_id) {
-        const existingUserStore = await prisma.store.findUnique({
-          where: { user_id },
-        });
-
-        if (existingUserStore) {
-          throw new Error("User already has a store");
-        }
-      }
-
-      const store = await prisma.store.create({
-        data: {
-          store_name,
-          address,
-          subdistrict,
-          city,
-          city_id,
-          province,
-          province_id,
-          postcode,
-          latitude,
-          longitude,
-          user_id,
-        },
-      });
-
-      return res.status(201).json(store);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      return res.status(500).json({ error: message });
-    }
-  }
-
-  async getStores(req: Request, res: Response) {
-    try {
-      const stores = await prisma.store.findMany({
-        include: {
-          User: {
-            select: {
-              email: true,
-              username: true,
-              phone: true,
-            },
-          },
-          Product: true,
-          Inventory: true,
-        },
-      });
-
-      return res.status(200).json(stores);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      return res.status(500).json({ error: message });
-    }
-  }
-
-  async getStoreById(req: Request, res: Response) {
-    try {
-      const { store_id } = req.params;
-
-      const store = await prisma.store.findUnique({
-        where: { store_id: parseInt(store_id) },
-        include: {
-          User: {
-            select: {
-              email: true,
-              username: true,
-              phone: true,
-            },
-          },
-          Product: true,
-          Inventory: true,
-        },
-      });
-
-      if (!store) {
-        throw new Error("Store not found");
-      }
-
-      return res.status(200).json(store);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      return res.status(500).json({ error: message });
-    }
-  }
-
-  async updateStore(req: Request, res: Response) {
-    try {
-      const { store_id } = req.params;
-      const {
-        store_name,
-        address,
-        subdistrict,
-        city,
-        city_id,
-        province,
-        province_id,
+        city_name,
         postcode,
         latitude,
         longitude,
         user_id,
       } = req.body;
 
-      if (store_name) {
-        const existingStore = await prisma.store.findFirst({
-          where: {
-            store_name,
-            store_id: { not: parseInt(store_id) },
-          },
-        });
-
-        if (existingStore) {
-          throw new Error("Store name already exists");
-        }
+      // Basic validation
+      if (
+        !store_name ||
+        !address ||
+        !city ||
+        !city_name ||
+        !postcode ||
+        !latitude ||
+        !longitude
+      ) {
+        return res.status(400).json({ error: "Missing required fields" });
       }
 
-      if (user_id) {
-        const existingUserStore = await prisma.store.findFirst({
-          where: {
-            user_id,
-            store_id: { not: parseInt(store_id) },
-          },
-        });
+      // Parse latitude and longitude to numbers
+      const parsedLatitude = parseFloat(latitude);
+      const parsedLongitude = parseFloat(longitude);
 
-        if (existingUserStore) {
-          throw new Error("User already has a store");
-        }
+      if (isNaN(parsedLatitude) || isNaN(parsedLongitude)) {
+        return res.status(400).json({ error: "Invalid latitude or longitude" });
       }
 
-      const store = await prisma.store.update({
-        where: { store_id: parseInt(store_id) },
-        data: {
-          store_name,
-          address,
-          subdistrict,
-          city,
-          city_id,
-          province,
-          province_id,
-          postcode,
-          latitude,
-          longitude,
-          user_id,
+      // Get city data
+      const cityData = await this.storeService.getCityData(city_name);
+
+      // Check store name and user
+      await this.storeService.checkStoreAndUser(store_name, user_id);
+
+      // Create store
+      const store = await this.storeService.createStore({
+        store_name,
+        address,
+        subdistrict,
+        city,
+        city_id: cityData.city_id,
+        province: cityData.province,
+        province_id: cityData.province_id,
+        postcode,
+        latitude: parsedLatitude,
+        longitude: parsedLongitude,
+        ...(user_id && {
+          User: {
+            connect: { user_id: parseInt(user_id) },
+          },
+        }),
+        RajaOngkir: {
+          connect: { city_id: cityData.city_id },
         },
       });
 
-      return res.status(200).json(store);
-    } catch (error: unknown) {
+      return res.status(201).json(store);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      return res
+        .status(
+          error instanceof Error && error.message === "City not found"
+            ? 404
+            : 500
+        )
+        .json({ error: message });
+    }
+  };
+
+  public getStores = async (req: Request, res: Response) => {
+    try {
+      const stores = await this.storeService.getAllStores();
+      return res.status(200).json(stores);
+    } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown error occurred";
       return res.status(500).json({ error: message });
     }
-  }
+  };
 
-  async deleteStore(req: Request, res: Response) {
+  public getStoreById = async (req: Request, res: Response) => {
     try {
-      const { store_id } = req.params;
+      const storeId = parseInt(req.params.store_id);
 
-      await prisma.store.delete({
-        where: { store_id: parseInt(store_id) },
-      });
+      if (isNaN(storeId)) {
+        return res.status(400).json({ error: "Invalid store ID" });
+      }
+
+      const store = await this.storeService.getStoreById(storeId);
+
+      if (!store) {
+        return res.status(404).json({ error: "Store not found" });
+      }
+
+      return res.status(200).json(store);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      return res.status(500).json({ error: message });
+    }
+  };
+
+  public updateStore = async (req: Request, res: Response) => {
+    try {
+      const storeId = parseInt(req.params.store_id);
+
+      if (isNaN(storeId)) {
+        return res.status(400).json({ error: "Invalid store ID" });
+      }
+
+      const {
+        store_name,
+        address,
+        subdistrict,
+        city,
+        city_name,
+        postcode,
+        latitude,
+        longitude,
+        user_id,
+      } = req.body;
+
+      // Parse latitude and longitude if provided
+      const updateData: any = {
+        ...(store_name && { store_name }),
+        ...(address && { address }),
+        ...(subdistrict && { subdistrict }),
+        ...(city && { city }),
+        ...(postcode && { postcode }),
+        ...(latitude && { latitude: parseFloat(latitude) }),
+        ...(longitude && { longitude: parseFloat(longitude) }),
+      };
+
+      // If city_name is provided, update city-related data
+      if (city_name) {
+        const cityData = await this.storeService.getCityData(city_name);
+        Object.assign(updateData, {
+          city_id: cityData.city_id,
+          province: cityData.province,
+          province_id: cityData.province_id,
+          RajaOngkir: {
+            connect: { city_id: cityData.city_id },
+          },
+        });
+      }
+
+      // If user_id is provided, update user connection
+      if (user_id) {
+        Object.assign(updateData, {
+          User: {
+            connect: { user_id: parseInt(user_id) },
+          },
+        });
+      }
+
+      // Check store name and user if updating either
+      if (store_name || user_id) {
+        await this.storeService.checkStoreAndUser(store_name, user_id, storeId);
+      }
+
+      const store = await this.storeService.updateStore(storeId, updateData);
+
+      return res.status(200).json(store);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      if (error instanceof Error && error.message === "City not found") {
+        return res.status(404).json({ error: message });
+      }
+      return res.status(500).json({ error: message });
+    }
+  };
+
+  public deleteStore = async (req: Request, res: Response) => {
+    try {
+      const storeId = parseInt(req.params.store_id);
+
+      if (isNaN(storeId)) {
+        return res.status(400).json({ error: "Invalid store ID" });
+      }
+
+      await this.storeService.deleteStore(storeId);
 
       return res.status(200).json({ message: "Store deleted successfully" });
-    } catch (error: unknown) {
+    } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown error occurred";
+      if (message.includes("Record to delete does not exist")) {
+        return res.status(404).json({ error: "Store not found" });
+      }
       return res.status(500).json({ error: message });
     }
-  }
+  };
 }

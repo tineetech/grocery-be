@@ -92,9 +92,9 @@ model Provider {
 }
 
 model Address {
-  address_id  Int      @id @default(autoincrement())
+  address_id  Int        @id @default(autoincrement())
   user_id     Int
-  address     String   @db.Text
+  address     String     @db.Text
   subdistrict String?
   city        String
   city_id     String
@@ -103,20 +103,25 @@ model Address {
   postcode    String?
   latitude    Float
   longitude   Float
-  is_primary  Boolean  @default(false)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @default(now())
-  user        User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  is_primary  Boolean    @default(false)
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @default(now())
+  rajaOngkir  RajaOngkir @relation(fields: [city_id], references: [city_id])
+  user        User       @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model RajaOngkir {
   ongkir_id   Int    @id @default(autoincrement())
-  city_id     String @unique
+  city_id     String @unique // Ensure city_id is unique
   city_name   String
   province_id String
   province    String
   type        String
   postal_code String
+
+  // Relation to Store
+  Stores  Store[]
+  Address Address[]
 }
 
 model Referral {
@@ -164,8 +169,8 @@ model Discount {
 }
 
 model Store {
-  store_id    Int         @id @default(autoincrement())
-  store_name  String      @unique
+  store_id    Int      @id @default(autoincrement())
+  store_name  String   @unique
   address     String
   subdistrict String?
   city        String
@@ -175,14 +180,17 @@ model Store {
   postcode    String
   latitude    Float
   longitude   Float
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @default(now())
-  user_id     Int?        @unique
-  Discount    Discount[]
-  Product     Product[]
-  Inventory   Inventory[]
-  Order       Order[]
-  User        User?       @relation(fields: [user_id], references: [user_id])
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+  user_id     Int?     @unique
+
+  // Relations
+  Discount   Discount[]
+  Product    Product[]
+  Inventory  Inventory[]
+  Order      Order[]
+  User       User?       @relation(fields: [user_id], references: [user_id])
+  RajaOngkir RajaOngkir? @relation(fields: [city_id], references: [city_id]) // Relation to RajaOngkir
 }
 
 model Category {
