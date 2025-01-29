@@ -40,7 +40,7 @@ export class SuperAdminRouter {
       this.superAdminController.getUserById as unknown as RequestHandler
     );
 
-    // Update user role
+    // Update user role 
     this.router.patch(
       "/users/:id/role",
       this.authMiddleware.verifyToken as unknown as RequestHandler,

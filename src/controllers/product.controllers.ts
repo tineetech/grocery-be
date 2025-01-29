@@ -76,11 +76,27 @@ export class ProductController {
     try {
       const { product_id } = req.params;
 
+      // First delete all related inventory records
+      await prisma.inventory.deleteMany({
+        where: {
+          product_id: parseInt(product_id),
+        },
+      });
+
+      // Then delete the product image records if they exist
+      await prisma.productImage.deleteMany({
+        where: {
+          product_id: parseInt(product_id),
+        },
+      });
+
+      // Finally delete the product
       await prisma.product.delete({
         where: {
           product_id: parseInt(product_id),
         },
       });
+
       return res.status(200).json({ message: "Product deleted successfully" });
     } catch (error: unknown) {
       const message =
