@@ -12,7 +12,6 @@ export class CategoryController {
         data: {
           category_name,
           description,
-          category_url,
         },
       });
 
@@ -73,7 +72,6 @@ export class CategoryController {
         data: {
           category_name,
           description,
-          category_url,
         },
       });
 

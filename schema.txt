@@ -1,3 +1,5 @@
+old schema
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -50,6 +52,11 @@ enum ChangeType {
   name
 }
 
+enum ProviderType {
+  GOOGLE
+  FACEBOOK
+}
+
 model User {
   user_id    Int       @id @default(autoincrement())
   email      String    @unique
@@ -60,7 +67,6 @@ model User {
   last_name  String?
   date_ob    DateTime?
   avatar     String?
-  google_id  Int?
   role       Role
   verified   Boolean   @default(false)
   created_at DateTime  @default(now())
@@ -74,6 +80,17 @@ model User {
   Address           Address[]
   Voucher           Voucher[]
   cartItems         CartItem[]
+  Provider          Provider[]
+}
+
+model Provider {
+  provider_id   Int          @id @default(autoincrement())
+  user_id       Int
+  provider_name ProviderType
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @default(now())
+
+  user User @relation(fields: [user_id], references: [user_id])
 }
 
 model Address {
@@ -92,6 +109,16 @@ model Address {
   created_at  DateTime @default(now())
   updated_at  DateTime @default(now())
   user        User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model RajaOngkir {
+  ongkir_id   Int    @id @default(autoincrement())
+  city_id     String @unique
+  city_name   String
+  province_id String
+  province    String
+  type        String
+  postal_code String
 }
 
 model Referral {
@@ -144,7 +171,9 @@ model Store {
   address     String
   subdistrict String?
   city        String
+  city_id     String
   province    String
+  province_id String
   postcode    String
   latitude    Float
   longitude   Float

@@ -76,14 +76,12 @@ export class ProductController {
     try {
       const { product_id } = req.params;
 
-      // First delete all related inventory records
+
       await prisma.inventory.deleteMany({
         where: {
           product_id: parseInt(product_id),
         },
       });
-
-      // Then delete the product image records if they exist
       await prisma.productImage.deleteMany({
         where: {
           product_id: parseInt(product_id),
@@ -109,6 +107,7 @@ export class ProductController {
     try {
       const products = await prisma.product.findMany({
         include: {
+          store:true,
           category: true,
           Inventory: true,
           ProductImage: true,
