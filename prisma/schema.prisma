@@ -159,12 +159,13 @@ model Store {
 }
 
 model Category {
-  category_id   Int       @id @default(autoincrement())
-  category_name String
-  description   String    @db.Text
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @default(now())
-  Product       Product[]
+  category_id        Int       @id @default(autoincrement())
+  category_name      String
+  description        String    @db.Text
+  category_thumbnail String?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @default(now())
+  Product            Product[]
 }
 
 model Product {

@@ -42,18 +42,15 @@ export class CategoryController {
   async getCategoryById(req: Request, res: Response) {
     try {
       const { category_id } = req.params;
-
       const category = await prisma.category.findUnique({
         where: { category_id: parseInt(category_id) },
         include: {
           Product: true,
         },
       });
-
       if (!category) {
         throw new Error("Category not found");
       }
-
       return res.status(200).json(category);
     } catch (error: unknown) {
       const message =
