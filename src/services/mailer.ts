@@ -25,13 +25,13 @@ export const sendVerificationEmail = async (email: string, token: string) => {
     const template = handlebars.compile(source);
 
     const html = template({
-      link: `${process.env.BASE_URL_FRONTEND}/verification/${token}`,
+      link: `${process.env.BASE_URL_FE}/verification/${token}`,
     });
 
     await transporter.sendMail({
       from: process.env.MAIL_FROM,
       to: email,
-      subject: "Welcome to DSM",
+      subject: "Verify Youre Email Address",
       html,
       attachments: [
         {

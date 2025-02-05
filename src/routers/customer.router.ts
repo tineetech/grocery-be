@@ -21,6 +21,18 @@ export class CustomerRouter {
       this.authMiddleware.verifyToken as unknown as RequestHandler,
       this.customerController.getCustomerData as unknown as RequestHandler
     );
+
+    this.router.post(
+      "/profile/update",
+      this.authMiddleware.verifyToken as unknown as RequestHandler,
+      this.customerController.updateCustomerData as unknown as RequestHandler
+    );
+
+    this.router.post(
+      "/profile/avatar/update",
+      this.authMiddleware.verifyToken as unknown as RequestHandler,
+      this.customerController.updateAvatarCustomerData as unknown as RequestHandler
+    );
   }
 
   getRouter(): Router {

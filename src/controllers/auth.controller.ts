@@ -20,6 +20,8 @@ export class AuthController {
         return res.status(400).json({ error: "Email address already exists" });
       }
 
+      // const token = tokenService.createEmailToken({ id: 0, role: "customer", email });
+
       const newUser = await prisma.user.create({
         data: {
           email,
@@ -34,10 +36,16 @@ export class AuthController {
         email,
       });
 
+      await prisma.user.update({
+        where: { user_id: newUser.user_id },
+        data: { verify_token: token }
+      })
+
       await sendVerificationEmail(email, token);
 
       return res.status(201).json({
         status: "success",
+        token: token,
         message:
           "Registration successful. Please check your email for verification.",
         user: newUser,
@@ -47,6 +55,55 @@ export class AuthController {
       return res.status(500).json({ error: "Could Reach The Server Database" });
     }
   }
+
+  async registerStoreAdmin(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (existingUser) {
+        return res.status(400).json({ error: "Email address already exists" });
+      }
+
+      // const token = tokenService.createEmailToken({ id: 0, role: "customer", email });
+
+      const newUser = await prisma.user.create({
+        data: {
+          email,
+          role: "store_admin",
+          verified: false,
+        },
+      });
+
+      const token = tokenService.createEmailToken({
+        id: newUser.user_id,
+        role: newUser.role,
+        email,
+      });
+
+      await prisma.user.update({
+        where: { user_id: newUser.user_id },
+        data: { verify_token: token }
+      })
+
+      await sendVerificationEmail(email, token);
+
+      return res.status(201).json({
+        status: "success",
+        token: token,
+        message:
+          "Registration successful. Please check your email for verification.",
+        user: newUser,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Could Reach The Server Database" });
+    }
+  }
+
   async verifyAccount(req: Request, res: Response) {
     try {
       if (!req.user) {
@@ -81,17 +138,19 @@ export class AuthController {
         where: { user_id: userId },
         data: {
           username,
-          first_name: firstName,
-          last_name: lastName,
+          first_name: firstName ? firstName : null,
+          last_name: lastName ? lastName : null,
           phone,
           password: hashedPassword,
           verified: true,
+          verify_token: null
         },
       });
 
       return res.status(200).json({
         status: "success",
         message: "Email verified successfully",
+        role: user.role
       });
     } catch (error) {
       console.error(error);
@@ -99,6 +158,10 @@ export class AuthController {
     }
   }
   async loginAny(req: Request, res: Response) {
+    // validation
+    if (!req.body.email || !req.body.password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
     try {
       const user = await prisma.user.findUnique({
         where: { email: req.body.email },
@@ -109,7 +172,7 @@ export class AuthController {
       const validPass = await bcrypt.compare(req.body.password, user.password!);
       if (!validPass) throw "Password Incorrect";
 
-      const token = tokenService.createAccessToken({
+      const token = tokenService.createLoginToken({
         id: user.user_id,
         role: user.role,
       });
@@ -118,7 +181,8 @@ export class AuthController {
         .status(201)
         .send({ status: "ok", msg: "Login Success", token, user });
     } catch (error) {
-      return res.status(400).json({ error: error });
-    }
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }    
   }
 }

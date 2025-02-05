@@ -65,6 +65,7 @@ model User {
   verified   Boolean   @default(false)
   created_at DateTime  @default(now())
   updated_at DateTime  @default(now())
+  verify_token String? 
 
   referralsSent     Referral[] @relation("ReferrerRelation")
   referralsReceived Referral[] @relation("ReferredRelation")

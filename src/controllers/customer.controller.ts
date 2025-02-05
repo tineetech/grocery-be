@@ -18,6 +18,7 @@ export class CustomerController {
         select: {
           user_id: true,
           email: true,
+          avatar: true,
           username: true,
           first_name: true,
           last_name: true,
@@ -36,6 +37,76 @@ export class CustomerController {
       return res.status(200).json({
         status: "success",
         data: customer,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Could not fetch customer data" });
+    }
+  }
+
+  async updateCustomerData(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const {
+        firstName,
+        lastName,
+        email,
+        phone,
+      } = req.body;
+
+      const updateCust = await prisma.user.update({
+        where: { user_id: req.user.id },
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone
+        }
+      })
+
+      if (!updateCust) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      return res.status(200).json({
+        status: "success",
+        data: updateCust,
+        message: "Success update profile data"
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Could not fetch customer data" });
+    }
+  }
+
+  async updateAvatarCustomerData(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const {
+        avatar,
+      } = req.body;
+
+      const updateCust = await prisma.user.update({
+        where: { user_id: req.user.id },
+        data: {
+          avatar,
+        }
+      })
+
+      if (!updateCust) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      return res.status(200).json({
+        status: "success",
+        data: updateCust,
+        message: "Success update avatar profile"
       });
     } catch (error) {
       console.error(error);

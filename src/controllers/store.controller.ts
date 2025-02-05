@@ -15,8 +15,9 @@ export class StoreController {
         postcode,
         latitude,
         longitude,
-        user_id, 
+        user_id,
       } = req.body;
+      console.log(req.body)
 
       const existingStore = await prisma.store.findUnique({
         where: { store_name },
@@ -44,8 +45,8 @@ export class StoreController {
           city,
           province,
           postcode,
-          latitude,
-          longitude,
+          latitude: latitude ? latitude : null,
+          longitude: longitude ?  longitude : null,
           user_id,
         },
       });
@@ -116,6 +117,11 @@ export class StoreController {
   async updateStore(req: Request, res: Response) {
     try {
       const { store_id } = req.params;
+
+      if (!store_id) {
+        return res.status(400).json({ error: "Invalid store_id" });
+      }
+
       const {
         store_name,
         address,
@@ -142,6 +148,7 @@ export class StoreController {
       }
 
       if (user_id) {
+        console.log("user id : " + user_id)
         const existingUserStore = await prisma.store.findFirst({
           where: {
             user_id,
@@ -154,23 +161,51 @@ export class StoreController {
         }
       }
 
-      const store = await prisma.store.update({
-        where: { store_id: parseInt(store_id) },
-        data: {
-          store_name,
-          address,
-          subdistrict,
-          city,
-          province,
-          postcode,
-          latitude,
-          longitude,
-          user_id,
-        },
-      });
+      console.log("Store data before update:", JSON.stringify(req.body));
 
-      return res.status(200).json(store);
+      // const updateStore = await prisma.store.update({
+      //   where: { store_id: parseInt(store_id) },
+      //   data: {
+      //     store_name,
+      //     address,
+      //     subdistrict,
+      //     city,
+      //     province,
+      //     postcode,
+      //     latitude,
+      //     longitude,
+      //     user_id,
+      //   },
+      // });
+      function removeNullBytes(obj: Record<string, any>) {
+        return Object.fromEntries(
+          Object.entries(obj).map(([key, value]) => [
+            key,
+            typeof value === 'string' ? value.replace(/\0/g, '') : value,
+          ])
+        );
+      }
+      const cleanData = removeNullBytes({
+        store_name,
+        address,
+        subdistrict,
+        city,
+        province,
+        postcode,
+        latitude,
+        longitude,
+        user_id,
+      });
+      
+      const updateStore = await prisma.store.update({
+        where: { store_id: parseInt(store_id) },
+        data: cleanData,
+      });
+            
+
+      return res.status(200).json(updateStore);
     } catch (error: unknown) {
+      console.error("Update store error:", error);
       const message =
         error instanceof Error ? error.message : "Unknown error occurred";
       return res.status(500).json({ error: message });

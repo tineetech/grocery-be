@@ -22,6 +22,11 @@ export class AuthRouter {
     );
 
     this.router.post(
+      "/register/store-admin",
+      this.authController.registerStoreAdmin as unknown as RequestHandler
+    );
+
+    this.router.post(
       "/verification",
       this.authMiddleware.verifyToken as unknown as RequestHandler,
       this.authController.verifyAccount as unknown as RequestHandler
