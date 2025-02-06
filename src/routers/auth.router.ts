@@ -49,6 +49,11 @@ export class AuthRouter {
     );
 
     this.router.get(
+      "/check-email-token/:token",
+      this.authController.checkExpTokenEmailVerif as unknown as RequestHandler
+    );
+
+    this.router.get(
       "/cek-token",
       this.authMiddleware.verifyExpiredToken as unknown as RequestHandler
     );

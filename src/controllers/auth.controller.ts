@@ -3,7 +3,9 @@ import { PrismaClient } from "@prisma/client";
 import { tokenService } from "../helpers/createToken";
 import { sendResetPassEmail, sendVerificationEmail } from "../services/mailer";
 import { hashPass } from "../helpers/hashpassword";
+import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+const JWT_SECRET = process.env.SECRET_KEY || "osdjfksdhfishd"; 
 
 const prisma = new PrismaClient();
 
@@ -304,4 +306,29 @@ export class AuthController {
       return res.status(500).json({ message: "Internal server error" });
     }    
   }
+  
+  async checkExpTokenEmailVerif(req: Request, res: Response) {
+    const { token } = req.params;
+
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      // Verifikasi token
+      const decoded: any = jwt.verify(token, JWT_SECRET);
+      
+      // Cek apakah token sudah lebih dari 1 jam sejak dibuat
+      const tokenAge = Math.floor(Date.now() / 1000) - decoded.iat; // Selisih waktu dalam detik
+      if (tokenAge > 3600) { // 1 jam = 3600 detik
+        return res.status(409).json({ status: "no", message: "Token Expired" });
+      }
+
+      return res.status(200).json({ status: "ok", message: "Token Active" });
+
+    } catch (error) {
+      console.error(error);
+      return res.status(400).json({ error: "Invalid or expired token" });
+    }
+  };
 }
