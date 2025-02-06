@@ -42,6 +42,10 @@ class TokenService {
     return this.createTokenWithExpiry(payload, 86400);
   }
 
+  createEmailRegisterToken(payload: EmailTokenPayload): string {
+    return this.createTokenWithExpiry(payload, 3600);
+  }
+
   createEmailToken(payload: EmailTokenPayload): string {
     return this.createTokenWithExpiry(payload, 86400);
   }

@@ -3,17 +3,20 @@ import { CustomerController } from "../controllers/customer.controller";
 import { RequestHandler } from "express-serve-static-core";
 import { AuthMiddleware } from "../middleware/auth.verify";
 import { AddressCustomerController } from "../controllers/address-customer.controller";
+import { OrdersController } from "../controllers/orders.controller";
 
 export class CustomerRouter {
   private router: Router;
   private customerController: CustomerController;
   private addressCustomerController: AddressCustomerController;
+  private ordersController: OrdersController;
   private authMiddleware: AuthMiddleware;
 
   constructor() {
     this.router = Router();
     this.customerController = new CustomerController();
     this.addressCustomerController = new AddressCustomerController();
+    this.ordersController = new OrdersController();
     this.authMiddleware = new AuthMiddleware();
     this.initializeRoutes();
   }
@@ -49,10 +52,16 @@ export class CustomerRouter {
       this.addressCustomerController.createAddressCust as unknown as RequestHandler
     );
 
-    this.router.post(
-      "/address/update",
+    this.router.put(
+      "/address/primary/:address_id",
       this.authMiddleware.verifyToken as unknown as RequestHandler,
-      this.addressCustomerController.updateCustomerData as unknown as RequestHandler
+      this.addressCustomerController.updatePrimaryAddress as unknown as RequestHandler
+    );
+
+    this.router.put(
+      "/address/:address_id",
+      this.authMiddleware.verifyToken as unknown as RequestHandler,
+      this.addressCustomerController.updateAddress as unknown as RequestHandler
     );
 
     this.router.delete(
@@ -60,11 +69,11 @@ export class CustomerRouter {
       this.authMiddleware.verifyToken as unknown as RequestHandler,
       this.addressCustomerController.deleteAddress as unknown as RequestHandler
     );
-
-    this.router.post(
-      "/address/avatar/update",
+    
+    this.router.get(
+      "/orders",
       this.authMiddleware.verifyToken as unknown as RequestHandler,
-      this.addressCustomerController.updateAvatarCustomerData as unknown as RequestHandler
+      this.ordersController.getOrders as unknown as RequestHandler
     );
   }
 

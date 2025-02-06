@@ -30,7 +30,7 @@ export class AuthController {
         },
       });
 
-      const token = tokenService.createEmailToken({
+      const token = tokenService.createEmailRegisterToken({
         id: newUser.user_id,
         role: newUser.role,
         email,
