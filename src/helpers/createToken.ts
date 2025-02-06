@@ -12,9 +12,13 @@ interface EmailTokenPayload extends TokenPayload {
   email: string;
 }
 
+interface ResetPassTokenPayload extends TokenPayload {
+  resetPassword: string;
+}
+
 class TokenService {
   private createTokenWithExpiry(
-    payload: TokenPayload | EmailTokenPayload,
+    payload: TokenPayload | EmailTokenPayload | ResetPassTokenPayload,
     expiresIn: number
   ): string {
     try {
@@ -39,6 +43,10 @@ class TokenService {
   }
 
   createEmailToken(payload: EmailTokenPayload): string {
+    return this.createTokenWithExpiry(payload, 86400);
+  }
+
+  createResetToken(payload: ResetPassTokenPayload): string {
     return this.createTokenWithExpiry(payload, 86400);
   }
 

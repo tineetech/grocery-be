@@ -17,26 +17,33 @@ export class StoreController {
         longitude,
         user_id,
       } = req.body;
-      console.log(req.body)
 
-      const existingStore = await prisma.store.findUnique({
+      // Validasi input
+      if (!store_name || !address || !city || !province) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Periksa apakah store_name sudah ada
+      const existingStore = await prisma.store.findFirst({
         where: { store_name },
       });
 
       if (existingStore) {
-        throw new Error("Store name already exists");
+        return res.status(409).json({ error: "Store name already exists" });
       }
 
-      if (user_id) {
-        const existingUserStore = await prisma.store.findUnique({
+      // Periksa jika user_id dan koordinat diberikan
+      if (user_id && latitude && longitude) {
+        const existingUserStore = await prisma.store.findFirst({
           where: { user_id },
         });
 
         if (existingUserStore) {
-          throw new Error("User already has a store");
+          return res.status(409).json({ error: "User already has a store" });
         }
       }
 
+      // Buat store baru
       const store = await prisma.store.create({
         data: {
           store_name,
@@ -45,16 +52,17 @@ export class StoreController {
           city,
           province,
           postcode,
-          latitude: latitude ? latitude : null,
-          longitude: longitude ?  longitude : null,
-          user_id,
+          latitude: latitude || 0,
+          longitude: longitude || 0,
+          user_id: latitude && longitude ? user_id : null,
         },
       });
 
-      return res.status(201).json(store);
+      return res.status(201).json({ message: "Store created successfully", store });
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Unknown error occurred";
+      console.error("Error creating store:", message);
       return res.status(500).json({ error: message });
     }
   }
@@ -134,76 +142,35 @@ export class StoreController {
         user_id,
       } = req.body;
 
-      if (store_name) {
-        const existingStore = await prisma.store.findFirst({
-          where: {
-            store_name,
-            store_id: { not: parseInt(store_id) },
-          },
-        });
-
-        if (existingStore) {
-          throw new Error("Store name already exists");
-        }
-      }
-
-      if (user_id) {
-        console.log("user id : " + user_id)
-        const existingUserStore = await prisma.store.findFirst({
-          where: {
-            user_id,
-            store_id: { not: parseInt(store_id) },
-          },
-        });
-
-        if (existingUserStore) {
-          throw new Error("User already has a store");
-        }
-      }
-
-      console.log("Store data before update:", JSON.stringify(req.body));
-
-      // const updateStore = await prisma.store.update({
-      //   where: { store_id: parseInt(store_id) },
-      //   data: {
-      //     store_name,
-      //     address,
-      //     subdistrict,
-      //     city,
-      //     province,
-      //     postcode,
-      //     latitude,
-      //     longitude,
+      // const existingUserStore = await prisma.store.findFirst({
+      //   where: {
       //     user_id,
+      //     store_id: { not: parseInt(store_id) },
       //   },
       // });
-      function removeNullBytes(obj: Record<string, any>) {
-        return Object.fromEntries(
-          Object.entries(obj).map(([key, value]) => [
-            key,
-            typeof value === 'string' ? value.replace(/\0/g, '') : value,
-          ])
-        );
-      }
-      const cleanData = removeNullBytes({
-        store_name,
-        address,
-        subdistrict,
-        city,
-        province,
-        postcode,
-        latitude,
-        longitude,
-        user_id,
-      });
+
+      // if (existingUserStore) {
+      //   return res.status(409).json({ error: "User already has a store" });
+      // }
       
+      console.log("Store data before update:", JSON.stringify(req.body));
+
       const updateStore = await prisma.store.update({
         where: { store_id: parseInt(store_id) },
-        data: cleanData,
+        data: {
+          store_name,
+          address,
+          subdistrict,
+          city,
+          province,
+          postcode,
+          latitude,
+          longitude,
+          user_id: null,
+        },
       });
-            
 
-      return res.status(200).json(updateStore);
+      return res.status(201).json({ message: "Store created successfully", updateStore });
     } catch (error: unknown) {
       console.error("Update store error:", error);
       const message =

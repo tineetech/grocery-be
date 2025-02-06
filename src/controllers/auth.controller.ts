@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { tokenService } from "../helpers/createToken";
-import { sendVerificationEmail } from "../services/mailer";
+import { sendResetPassEmail, sendVerificationEmail } from "../services/mailer";
 import { hashPass } from "../helpers/hashpassword";
 import bcrypt from "bcrypt";
 
@@ -17,7 +17,7 @@ export class AuthController {
       });
 
       if (existingUser) {
-        return res.status(400).json({ error: "Email address already exists" });
+        return res.status(400).json({ message: "Email address already exists" });
       }
 
       // const token = tokenService.createEmailToken({ id: 0, role: "customer", email });
@@ -52,7 +52,7 @@ export class AuthController {
       });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Could Reach The Server Database" });
+      return res.status(500).json({ message: "Could Reach The Server Database" });
     }
   }
 
@@ -65,7 +65,7 @@ export class AuthController {
       });
 
       if (existingUser) {
-        return res.status(400).json({ error: "Email address already exists" });
+        return res.status(400).json({ message: "Email address already exists" });
       }
 
       // const token = tokenService.createEmailToken({ id: 0, role: "customer", email });
@@ -100,7 +100,7 @@ export class AuthController {
       });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Could Reach The Server Database" });
+      return res.status(500).json({ message: "Could Reach The Server Database" });
     }
   }
 
@@ -119,7 +119,7 @@ export class AuthController {
       } = req.body;
 
       if (password !== confirmPassword) {
-        return res.status(400).json({ error: "Passwords do not match" });
+        return res.status(400).json({ message: "Passwords do not match" });
       }
 
       const userId = req.user.id;
@@ -129,7 +129,7 @@ export class AuthController {
       });
 
       if (!user || user.verified) {
-        return res.status(400).json({ error: "Invalid verification request" });
+        return res.status(400).json({ message: "Invalid verification request" });
       }
 
       const hashedPassword = await hashPass(password);
@@ -157,21 +157,140 @@ export class AuthController {
       return res.status(500).json({ error: "Could Reach The Server Database" });
     }
   }
+
+  async resetPassword(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      console.log(req.body)
+
+      const findUser = await prisma.user.findFirst({
+        where: { email, role: "customer" },
+        select: {
+          user_id: true,
+          email: true,
+          avatar: true,
+          username: true,
+          first_name: true,
+          last_name: true,
+          phone: true,
+          role: true,
+          verified: true,
+          created_at: true,
+          updated_at: true,
+        },
+      });
+
+      if (findUser) {
+        const token = tokenService.createResetToken({
+          id: findUser.user_id,
+          role: findUser.role,
+          resetPassword: findUser.role,
+        });
+        
+        await prisma.user.update({
+          where: { user_id: findUser?.user_id },
+          data: { password_reset_token: token }
+        })
+        
+        await sendResetPassEmail(email, token);
+        
+        return res.status(201).json({
+          status: "success",
+          token: token,
+          message:
+          "Reset Password Link send successfully. Please check your email for verification.",
+          user: findUser,
+        });
+      }
+      return res.status(403).json({
+        status: "error",
+        token: "",
+        message:
+        "User not found.",
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Could Reach The Server Database" });
+    }
+  }
+
+  async verifyResetPassword(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { oldPassword, password, confirmPassword } = req.body;
+      // Validasi kesesuaian password baru
+      if (password !== confirmPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
+      }
+      
+      if (!oldPassword || !password) {
+        return res.status(400).json({ message: "Both old and new passwords are required" });
+      }
+      
+      const userId = req.user.id;
+      
+      // Cari pengguna berdasarkan ID
+      const user = await prisma.user.findUnique({
+        where: { user_id: userId },
+      });
+
+      if (!user) {
+        return res.status(400).json({ message: "Invalid Reset password request" });
+      }
+
+      // Bandingkan password yang belum di-hash dengan password yang sudah di-hash
+      const isPasswordMatch = await bcrypt.compare(oldPassword, user.password!);
+
+      if (!isPasswordMatch) {
+        return res.status(400).json({ message: "Old password is incorrect" });
+      }
+
+      console.log(user)
+
+      // Hash dan simpan password baru
+      const hashedPassword = await hashPass(password);
+
+      await prisma.user.update({
+        where: { user_id: userId },
+        data: {
+          password: hashedPassword,
+          verify_token: null,
+          password_reset_token: null
+        },
+      });
+
+      return res.status(200).json({
+        status: "success",
+        message: "Password Reset successfully",
+        role: user.role
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: "Could Reach The Server Database" });
+    }
+  }
+
   async loginAny(req: Request, res: Response) {
     // validation
     if (!req.body.email || !req.body.password) {
-      return res.status(400).json({ error: "Email and password are required" });
+      return res.status(400).json({ message: "Email and password are required" });
     }
     try {
       const user = await prisma.user.findUnique({
         where: { email: req.body.email },
       });
-
-      if (!user) throw "User Not Found";
-
+      
+      if (!user) {
+        return res.status(400).json({ message: "User not found" });
+      }
+      
       const validPass = await bcrypt.compare(req.body.password, user.password!);
-      if (!validPass) throw "Password Incorrect";
-
+      if (!validPass) {
+        return res.status(400).json({ message: "Password incorrect!" });
+      }
       const token = tokenService.createLoginToken({
         id: user.user_id,
         role: user.role,
@@ -182,7 +301,7 @@ export class AuthController {
         .send({ status: "ok", msg: "Login Success", token, user });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ message: "Internal server error" });
     }    
   }
 }
