@@ -29,6 +29,12 @@ export class CustomerRouter {
     );
 
     this.router.post(
+      "/profile/set-password",
+      this.authMiddleware.verifyToken as unknown as RequestHandler,
+      this.customerController.setPassAuthGoogle as unknown as RequestHandler
+    );
+
+    this.router.post(
       "/profile/update",
       this.authMiddleware.verifyToken as unknown as RequestHandler,
       this.customerController.updateCustomerData as unknown as RequestHandler

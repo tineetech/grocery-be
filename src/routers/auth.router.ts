@@ -17,6 +17,11 @@ export class AuthRouter {
 
   private initializeRoutes() {
     this.router.post(
+      "/google",
+      this.authController.googleRegister as unknown as RequestHandler
+    );
+
+    this.router.post(
       "/register",
       this.authController.registerCustomer as unknown as RequestHandler
     );

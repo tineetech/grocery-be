@@ -10,6 +10,43 @@ const JWT_SECRET = process.env.SECRET_KEY || "osdjfksdhfishd";
 const prisma = new PrismaClient();
 
 export class AuthController {
+  async googleRegister(req: Request, res: Response) {
+    try {
+      const { email, name, picture } = req.body;
+
+      if (!email) return res.status(400).json({ error: "Email tidak ditemukan" });
+
+      let user = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        // Buat user baru jika belum ada
+        user = await prisma.user.create({
+          data: { email, role: "customer", username: name, avatar: picture, verified: true },
+        });
+      }
+
+      const token = tokenService.createLoginToken({
+        id: user.user_id,
+        role: user.role
+      });
+
+      // await sendVerificationEmail(email, token);
+
+      return res.status(201).json({
+        status: "success",
+        token: token,
+        message:
+          "Login google successfully.",
+        user: user,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: "Could Reach The Server Database" });
+    }
+  }
+
   async registerCustomer(req: Request, res: Response) {
     try {
       const { email } = req.body;

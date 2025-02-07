@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { Request, Response } from "express";
+import { hashPass } from "../helpers/hashpassword";
 
 const prisma = new PrismaClient();
 
@@ -20,6 +21,7 @@ export class CustomerController {
           email: true,
           avatar: true,
           username: true,
+          password: true,
           first_name: true,
           last_name: true,
           phone: true,
@@ -37,6 +39,45 @@ export class CustomerController {
       return res.status(200).json({
         status: "success",
         data: customer,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Could not fetch customer data" });
+    }
+  }
+
+  async setPassAuthGoogle(req: Request, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const {
+        password,
+        confirmPassword
+      } = req.body;
+
+      if (password !== confirmPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
+      }
+
+      const hashedPassword = await hashPass(password);
+
+      const setPass = await prisma.user.update({
+        where: { user_id: req.user.id },
+        data: {
+          password: hashedPassword,
+        }
+      })
+
+      if (!setPass) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      return res.status(200).json({
+        status: "success",
+        data: setPass,
+        message: "Success update profile data"
       });
     } catch (error) {
       console.error(error);

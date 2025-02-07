@@ -6,10 +6,14 @@ const prisma = new PrismaClient();
 export class OrdersController {
   async getOrders(req: Request, res: Response) {
     try {
+        if (!req.user) {
+          return res.status(401).json({ error: "Unauthorized" });
+        }
+      
         const { store_id } = req.query;
 
         const orders = await prisma.order.findMany({
-            where: store_id ? { store_id: parseInt(store_id as string) } : undefined,
+            where: { user_id: req.user.id },
             include: {
                 OrderItem: {  // Mengambil semua item terkait dengan order
                     include: {
