@@ -182,15 +182,16 @@ export class StoreController {
   async deleteStore(req: Request, res: Response) {
     try {
       const { store_id } = req.params;
-
+      
       await prisma.store.delete({
         where: { store_id: parseInt(store_id) },
       });
-
+      
       return res.status(200).json({ message: "Store deleted successfully" });
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Unknown error occurred";
+      error instanceof Error ? error.message : "Unknown error occurred";
+      console.log(message)
       return res.status(500).json({ error: message });
     }
   }
