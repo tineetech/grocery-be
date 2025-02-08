@@ -200,7 +200,19 @@ export class AuthController {
   async resetPassword(req: Request, res: Response) {
     try {
       const { email } = req.body;
-      console.log(req.body)
+
+      const isNewbie = await prisma.user.findFirst({
+        where: { email, password: null }
+      })
+
+      if (isNewbie) {
+        return res.status(403).json({
+          status: "error",
+          token: "",
+          message:
+          "The email is have no password, Please choose antoher account.",
+        });
+      }
 
       const findUser = await prisma.user.findFirst({
         where: { email, role: "customer" },
@@ -219,33 +231,34 @@ export class AuthController {
         },
       });
 
-      if (findUser) {
-        const token = tokenService.createResetToken({
-          id: findUser.user_id,
-          role: findUser.role,
-          resetPassword: findUser.role,
-        });
-        
-        await prisma.user.update({
-          where: { user_id: findUser?.user_id },
-          data: { password_reset_token: token }
-        })
-        
-        await sendResetPassEmail(email, token);
-        
-        return res.status(201).json({
-          status: "success",
-          token: token,
+      if (!findUser) {
+        return res.status(403).json({
+          status: "error",
+          token: "",
           message:
-          "Reset Password Link send successfully. Please check your email for verification.",
-          user: findUser,
+          "User not found.",
         });
       }
-      return res.status(403).json({
-        status: "error",
-        token: "",
+
+      const token = tokenService.createResetToken({
+        id: findUser.user_id,
+        role: findUser.role,
+        resetPassword: findUser.role,
+      });
+      
+      await prisma.user.update({
+        where: { user_id: findUser?.user_id },
+        data: { password_reset_token: token }
+      })
+      
+      await sendResetPassEmail(email, token);
+      
+      return res.status(201).json({
+        status: "success",
+        token: token,
         message:
-        "User not found.",
+        "Reset Password Link send successfully. Please check your email for verification.",
+        user: findUser,
       });
     } catch (error) {
       console.error(error);
